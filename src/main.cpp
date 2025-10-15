@@ -280,6 +280,7 @@ bool processCommand(String cmd)
           if (!val)
             strcpy(val,"0");
           settings.reportInterval=atoi(val);
+          statusReportTime=settings.reportInterval; //reset the timer
           saveSettings();
           }
         else if (strcmp(nme,"raincheckinterval")==0)
@@ -906,6 +907,16 @@ voltages readSensors()
   readings.batteryVoltage = getBattery(); // millivolts
   readings.solarPanelVoltage = getSolarPanel(); // millivolts
   
+  Serial.print("\nRain sensor value: ");
+  Serial.println(readings.rainSensorValue);
+  Serial.print("Vcc: ");
+  Serial.println(readings.vcc);
+  Serial.print("Battery: ");
+  Serial.println(readings.batteryVoltage);
+  Serial.print("Solar Panel: ");
+  Serial.println(readings.solarPanelVoltage);
+  Serial.println("\n");
+
   return readings;
   }
 
@@ -999,9 +1010,12 @@ bool once=true; //for testing
 
 void loop(void) 
   {
-  voltages vals=readSensors();// take a reading from all sensors before turning on the wifi
+  static voltages vals;
+  
+  if (once)
+    vals=readSensors();// take a reading from all sensors before turning on the wifi
   uint16_t sensorReading = vals.rainSensorValue;
- 
+
   ulong now= millis();
   
   /////////// Display stuff
