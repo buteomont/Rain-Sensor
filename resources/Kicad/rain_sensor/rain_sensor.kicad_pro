@@ -24,9 +24,7 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [
-      "power_pin_not_driven|1285240|1061720|45ffebe8-9ed5-4982-87ee-b900ec10ce3e|00000000-0000-0000-0000-000000000000|/2e3d1f16-5713-4104-87c1-22c26c040092|/2e3d1f16-5713-4104-87c1-22c26c040092|"
-    ],
+    "erc_exclusions": [],
     "meta": {
       "version": 0
     },
@@ -372,7 +370,7 @@
     "meta": {
       "version": 1
     },
-    "net_format_name": "",
+    "net_format_name": "KiCad",
     "page_layout_descr_file": "",
     "plot_directory": "",
     "spice_current_sheet_as_root": false,

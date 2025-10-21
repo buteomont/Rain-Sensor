@@ -2870,7 +2870,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "820K"
+		(property "Value" "680K"
 			(at 208.28 87.1219 0)
 			(effects
 				(font
@@ -4033,7 +4033,7 @@
 				(hide yes)
 			)
 		)
-		(property "Value" "Solar Battery"
+		(property "Value" "Battery"
 			(at 78.486 81.026 0)
 			(effects
 				(font

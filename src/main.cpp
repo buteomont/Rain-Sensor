@@ -1,5 +1,6 @@
 #include <Arduino.h>
 //#include <U8g2lib.h>
+#include "driver/adc.h"
 #include <Wire.h>
 #include <math.h>    
 #include <WiFi.h>
@@ -14,6 +15,9 @@
 //U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R2, U8X8_PIN_NONE, 6, 5); // special tiny screen
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
+
+// GPIO5 on the ESP32-C3 maps to ADC2 Channel 0
+const adc2_channel_t ADC2_BATTERY_CHANNEL = ADC2_CHANNEL_0;
 
 // The variables below will be persisted in RTC memory so they are not lost during deep sleep
 // See: https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html#deep-sleep
@@ -376,21 +380,60 @@ uint32_t getVcc()
   int result = analogRead(VCC_PIN_A1); // read the Vcc directly
   //There is no voltage divider on Vcc, so the formula is simple
   //float vcc = result/4095.0f * 3.3f; // Calculate Vcc (in Volts); 4095 for 12 bit ADC
-  return map(result, 0, 4095, 0, 3300); //millivolts
+  result=map(result, 0, 4095, 0, 3300); //millivolts
+  Serial.print("\n**************** Mapped Vcc:  ");
+  Serial.println(result);
+  return result;
   }
 
 /* Read and return the battery voltage in millivolts */
 uint32_t getBattery()
   {
+  #define R1 470.0f // resistor values for the voltage divider
+  #define R2 470.0f
+  #define ADC_MAX_VOLTAGE_MV 3300.0f // Your ADC is tied to 3.3V
+  #define ADC_MAX_VALUE 4095.0f // 12-bit ADC
+
+  // Fraction of battery voltage seen by ADC (0.5 for R1=R2)
+  #define BATTERY_DIVIDER_RATIO (R2/(R1+R2)) 
+
   int result = analogRead(BATTERY_PIN_A3); // read the battery divider value
-  return map(result, 0, 4095, 0, MAX_BATTERY_VOLTAGE); //millivolts
+
+  // 1. Calculate the voltage at the divider tap (rawToMillivolts) using float math
+  // (Result / ADC_MAX_VALUE) * ADC_MAX_VOLTAGE_MV
+  float rawToMillivolts = ((float)result / ADC_MAX_VALUE) * ADC_MAX_VOLTAGE_MV; 
+
+  // 2. Calculate the actual battery voltage (bt)
+  // Voltage_Battery = Voltage_Tap / BATTERY_DIVIDER_RATIO (which is 0.5)
+  float bt_float = rawToMillivolts / BATTERY_DIVIDER_RATIO; 
+  
+  // The final result should be returned as an integer (uint32_t), so cast it.
+  uint32_t bt = (uint32_t)bt_float;
+
+  Serial.print("\n**************** Raw Battery:  ");
+  Serial.println(result);
+  
+  Serial.print("\n**************** Mapped Battery:  ");
+  Serial.println(bt);
+  return bt;
   }
 
 /* Read and return the solar panel voltage in millivolts */
 uint32_t getSolarPanel()
   {
+  #define R3 680.0f
+  #define R4 470.0f
+  #define SOL_MAX_RAW_VOLTS MAX_SOLAR_PANEL_VOLTAGE*(R4/(R3+R4))
+  #define SOL_MAX_RAW_VALUE 4095*(SOL_MAX_RAW_VOLTS)/(ADC_MAX_VOLTAGE_MV) //maximum raw ADC value we expect to see from the solar panel divider
   int result = analogRead(SOLAR_PANEL_PIN_A2); // read the battery divider value
-  return map(result, 0, 4095, 0, MAX_SOLAR_PANEL_VOLTAGE); //millivolts
+  Serial.print("\n**************** Raw Solar Panel:  ");
+  Serial.println(result);
+  result=map(result, 0, SOL_MAX_RAW_VALUE, 0, MAX_SOLAR_PANEL_VOLTAGE); //millivolts
+  
+  Serial.print("\n**************** Mapped Solar Panel:  ");
+  Serial.println(result);
+
+  return result;
   }
 
 /************************
@@ -966,11 +1009,8 @@ void initPorts()
   pinMode(SENSOR_POWER_PIN, OUTPUT);   // set the sensor power pin as an output
   digitalWrite(SENSOR_POWER_PIN, LOW); // turn off the power to the sensor until we need it
 
-  // Do an initial read of the ADC pins to stabilize them
-  analogRead(SENSOR_PIN_A0); 
-  analogRead(VCC_PIN_A1); 
-  analogRead(SOLAR_PANEL_PIN_A2); 
-  analogRead(BATTERY_PIN_A3);
+  // 1. Set 12-bit resolution for all ADC reads
+  analogReadResolution(12);
 
   // Set all ADC ranges to to 0-3.3V
   analogSetPinAttenuation(SENSOR_PIN_A0, ADC_11db); 
@@ -1002,6 +1042,24 @@ void setup(void)
   initRTCVars();
 
   initDisplay();
+
+
+  // // Set 11dB attenuation (up to ~3.3V) for the specific channel
+  // esp_err_t result = adc2_config_channel_atten(ADC2_BATTERY_CHANNEL, ADC_ATTEN_DB_11);
+  
+  // if (result == ESP_OK)
+  //   {
+  //   Serial.println("ADC2 Channel configured successfully.");
+  //   }
+  // else
+  //   {
+  //   // If this fails, the force flag definitely isn't working.
+  //   Serial.printf("ADC2 Configuration Failed in setup() (Error: %s)\n", esp_err_to_name(result));
+  //   }
+
+
+
+
 
   initPorts();
   }

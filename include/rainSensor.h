@@ -7,6 +7,7 @@
 #define BATTERY_PIN_A3 5 //The raw battery voltage divider is connected to ADC3
 #define MAX_SOLAR_PANEL_VOLTAGE 7000 //millivolts
 #define MAX_BATTERY_VOLTAGE 4200 //millivolts
+#define ADC_MAX_VOLTAGE_MV 3300 //ESP32 ADC reference voltage
 
 #define DEFAULT_RAIN_THRESHOLD 3000  // Default threshold value for rain detection
 #define DEFAULT_RAIN_CHECK_INTERVAL 15 //seconds between rain checks
