@@ -598,7 +598,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
       strcat(jsonStatus,tempbuf);
       strcat(jsonStatus,"\", \"debug\":\"");
       strcat(jsonStatus,settings.debug?"true":"false");
-      strcat(jsonStatus,"\", \"reportinterval\":");
+      strcat(jsonStatus,"\", \"reportinterval\":\"");
       sprintf(tempbuf,"%d",settings.reportInterval);
       strcat(jsonStatus,tempbuf);
       strcat(jsonStatus,"\", \"raincheckinterval\":");
