@@ -391,7 +391,6 @@ uint32_t getBattery()
   {
   #define R1 470.0f // resistor values for the voltage divider
   #define R2 470.0f
-  #define ADC_MAX_VOLTAGE_MV 3300.0f // Your ADC is tied to 3.3V
   #define ADC_MAX_VALUE 4095.0f // 12-bit ADC
 
   // Fraction of battery voltage seen by ADC (0.5 for R1=R2)
@@ -1191,7 +1190,7 @@ void loop(void)
 
   if (settingsAreValid && now>=bedtime) //time to sleep
     {
-    Serial.println("Going to sleep now.");
+    Serial.println("Sleeping for "+String(settings.rainCheckInterval)+" seconds.");
     delay(1000); //wait for serial to complete and time to read display
     //u8g2.setPowerSave(true); // turn off the display
     //delay(100); // wait for the display to turn off
