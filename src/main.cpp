@@ -42,6 +42,7 @@ typedef struct
   char mqttTopicRoot[MQTT_TOPIC_SIZE]="";
   char mqttClientId[MQTT_CLIENTID_SIZE]=""; //will be the same across reboots
   bool debug=true;
+  bool reportEveryWake=false; //report status every wake cycle
   char address[ADDRESS_SIZE]=""; //static address for this device
   char netmask[ADDRESS_SIZE]=""; //size of network
   int32_t reportInterval=DEFAULT_STATUS_REPORT_INTERVAL; //How many seconds of dry before making status report
@@ -94,6 +95,8 @@ void initializeSettings()
   strcpy(settings.mqttTopicRoot,"");
   settings.rainThreshold=DEFAULT_RAIN_THRESHOLD;
   settings.rainCheckInterval=DEFAULT_RAIN_CHECK_INTERVAL;
+  settings.debug=true;
+  settings.reportEveryWake=false;
   strcpy(settings.address,"");
   strcpy(settings.netmask,"255.255.255.0");
   settings.reportInterval=DEFAULT_STATUS_REPORT_INTERVAL;
@@ -134,7 +137,7 @@ void showSettings()
   Serial.print("rainthreshold=<Value (0-4095) below this is 'raining'> (");
   Serial.print(settings.rainThreshold);
   Serial.println(")");
-  Serial.print("debug=1|0 (");
+  Serial.print("debug=<1|0> (");
   Serial.print(settings.debug);
   Serial.println(")");
   Serial.print("reportinterval=<seconds between regular status reports>   (");
@@ -142,6 +145,9 @@ void showSettings()
   Serial.println(")");
   Serial.print("raincheckinterval=<seconds between rain checks>   (");
   Serial.print(settings.rainCheckInterval);
+  Serial.println(")");
+  Serial.print("reporteverywake=<1|0> (");
+  Serial.print(settings.reportEveryWake);
   Serial.println(")");
   
   Serial.print("MQTT Client ID is ");
@@ -277,6 +283,13 @@ bool processCommand(String cmd)
           if (!val)
             strcpy(val,"0");
           settings.debug=atoi(val)==1?true:false;
+          saveSettings();
+          }
+        else if (strcmp(nme,"reporteverywake")==0)
+          {
+          if (!val)
+            strcpy(val,"0");
+          settings.reportEveryWake=atoi(val)==1?true:false;
           saveSettings();
           }
         else if (strcmp(nme,"reportinterval")==0)
@@ -597,6 +610,8 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
       strcat(jsonStatus,tempbuf);
       strcat(jsonStatus,"\", \"debug\":\"");
       strcat(jsonStatus,settings.debug?"true":"false");
+      strcat(jsonStatus,"\", \"reporteverywake\":\"");
+      strcat(jsonStatus,settings.reportEveryWake?"true":"false");
       strcat(jsonStatus,"\", \"reportinterval\":\"");
       sprintf(tempbuf,"%d",settings.reportInterval);
       strcat(jsonStatus,tempbuf);
@@ -1063,10 +1078,9 @@ void setup(void)
   initPorts();
   }
 
-bool once=true; //for testing
-
 void loop(void) 
   {
+  static bool once=true; //for testing and looping without deep sleep
   static voltages vals;
   
   if (once)
@@ -1088,19 +1102,17 @@ void loop(void)
         sensorReading>DEFAULT_RAIN_THRESHOLD?"DRY":"RAIN");
 
   //show(buffer); // display the reading on the OLED screen
-  if (once)
-    {
-    once=false;
-    Serial.print("******************* ");
-    Serial.println(buffer);
-    Serial.print("StatusReportTime = ");
-    Serial.println(statusReportTime);
-  }
     
   //////////// Reporting stuff
   if (settingsAreValid)
     {
     bool raining = sensorReading < settings.rainThreshold;
+
+    if (settings.reportEveryWake && once) //report every time we wake up
+      {
+      Serial.println("Reporting on every wakeup as configured.");
+      statusReportTime=0; //force a report
+      }
 
     if (raining && !rainEventReported) //we are now in a rain event and haven't reported it yet
       {
@@ -1121,8 +1133,8 @@ void loop(void)
       Serial.println("Rain event ended, reporting.");
       if (report(sensorReading)) //try to report the reading
         {
-        dryEventReported=true; //only report once per event
         rainEventReported=false; //reset the rain event flag
+        dryEventReported=true; //only report once per event
         statusReportTime=settings.reportInterval; //reset the status report timer
         }
       }
@@ -1158,6 +1170,15 @@ void loop(void)
     Serial.println("Settings fixed, will try to report on next wakeup.");
     }
   
+  if (once)
+    {
+    once=false;
+    Serial.print("******************* ");
+    Serial.println(buffer);
+    Serial.print("StatusReportTime = ");
+    Serial.println(statusReportTime);
+    }
+
  
   checkForCommand(); //check for input in case something needs to be changed to make it work
   
