@@ -69,7 +69,6 @@ String commandString = "";     // a String to hold incoming commands from serial
 bool commandComplete = false;  // goes true when enter is pressed
 ulong bedtime = 0; //time to go to sleep
 
-
 //Generate an MQTT client ID.  This should not be necessary very often
 char* generateMqttClientId(char* mqttId)
   {
@@ -564,6 +563,8 @@ boolean publish(char* topic, const char* reading, boolean retain)
  */
 void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length) 
   {
+  bedtime=millis()+1000; //stay awake long enough to process the command
+
   if (settings.debug)
     {
     Serial.println("====================================> Callback works.");
@@ -980,9 +981,15 @@ voltages readSensors()
 void initSerial()
   {
   Serial.begin(9600);
-  Serial.setTimeout(10000);
+
+  // Set the TX timeout to 0 milliseconds so that it will run without a serial port attached
+  Serial.setTxTimeoutMs(0); 
+
+  // Now, all subsequent Serial.print() and Serial.println() calls 
+  // should be non-blocking. If the buffer is full (i.e., the PC isn't listening), 
+  // the data is dropped, and the program continues immediately.  
   
-  while (!Serial); // wait here for serial port to connect.
+  delay(100); //give time for serial to start 
   Serial.println();
   Serial.println("Serial communications established.");
   delay(5000);
@@ -1203,6 +1210,7 @@ void loop(void)
       }
     Serial.println("Simulated sleep delay complete, simulating wakeup.");
     delay(1000); //wait for serial to complete
+
     esp_restart(); //just restart instead of sleeping
 
     // esp_sleep_enable_timer_wakeup(1); //wake up immediately
@@ -1212,10 +1220,14 @@ void loop(void)
   if (settingsAreValid && now>=bedtime) //time to sleep
     {
     Serial.println("Sleeping for "+String(settings.rainCheckInterval)+" seconds.");
-    delay(1000); //wait for serial to complete and time to read display
+    ulong waitasec=millis()+1000;
+    do //stay awake while incoming serial commands are possible
+      {
+      checkForCommand(); //check for input in case something needs to be changed 
+      delay(10);
+      } while(now<bedtime);
     //u8g2.setPowerSave(true); // turn off the display
     //delay(100); // wait for the display to turn off
-    //Todo: replace interval with a setting value
     esp_sleep_enable_timer_wakeup(settings.rainCheckInterval*1000000); //seconds to microseconds
     esp_deep_sleep_start();
     }
