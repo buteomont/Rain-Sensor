@@ -538,6 +538,7 @@ boolean publish(char* topic, const char* reading, boolean retain)
       WiFi.status()==WL_CONNECTED)
     {
     ok=mqttClient.publish(topic,reading,retain); 
+    mqttClient.loop(); //check for incoming messages
     }
   else
     {
@@ -739,7 +740,7 @@ void reconnectToBroker()
         Serial.println("Could not connect to MQTT broker.");
         }
       else
-        mqttClient.loop(); //This has to happen every so often or we get disconnected for some reason
+        mqttClient.loop(); //This has to happen every so often to check for incoming messages
       }
     }
   else if (settings.debug)
@@ -1220,12 +1221,12 @@ void loop(void)
   if (settingsAreValid && now>=bedtime) //time to sleep
     {
     Serial.println("Sleeping for "+String(settings.rainCheckInterval)+" seconds.");
-    ulong waitasec=millis()+1000;
+    bedtime=millis()+1000; //just in case an MQTT message has come in
     do //stay awake while incoming serial commands are possible
       {
       checkForCommand(); //check for input in case something needs to be changed 
-      delay(10);
-      } while(now<bedtime);
+      mqttClient.loop(); //check for incoming messages
+      } while(millis()<bedtime);
     //u8g2.setPowerSave(true); // turn off the display
     //delay(100); // wait for the display to turn off
     esp_sleep_enable_timer_wakeup(settings.rainCheckInterval*1000000); //seconds to microseconds
