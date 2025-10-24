@@ -1005,7 +1005,7 @@ void initSettings()
   loadSettings(); //set the values from eeprom 
 
   //show the MAC address
-  Serial.print("ESP8266 MAC Address: ");
+  Serial.print("MAC Address: ");
   Serial.println(WiFi.macAddress());
 
   if (settings.mqttBrokerPort < 0) //then this must be the first powerup
@@ -1204,7 +1204,7 @@ void loop(void)
       } while(millis()<bedtime);
     //u8g2.setPowerSave(true); // turn off the display
     //delay(100); // wait for the display to turn off
-    esp_sleep_enable_timer_wakeup(settings.rainCheckInterval*1000000); //seconds to microseconds
+    esp_sleep_enable_timer_wakeup((uint64_t)settings.rainCheckInterval*1000000ULL); //seconds to microseconds
     esp_deep_sleep_start();
     }
   }
