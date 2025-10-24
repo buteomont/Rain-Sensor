@@ -622,14 +622,7 @@ void incomingMqttHandler(char* reqTopic, byte* payload, unsigned int length)
       strcat(jsonStatus,tempbuf);
       strcat(jsonStatus,", \"IPAddress\":\"");
       strcat(jsonStatus,wifiClient.localIP().toString().c_str());
-      strcat(jsonStatus,"\",");
-      strcat(jsonStatus,"\"ports\":[");
-      size_t len = strlen(jsonStatus);
-      if (jsonStatus[len - 1] == ',')
-        jsonStatus[len - 1] = ']';   //replace the last comma to close the array
-      else
-        strcat(jsonStatus,"]"); //happens when port array is empty
-      
+      strcat(jsonStatus,"\"");
       strcat(jsonStatus,"}");
       response=jsonStatus;
       }
@@ -1064,24 +1057,6 @@ void setup(void)
   initRTCVars();
 
   initDisplay();
-
-
-  // // Set 11dB attenuation (up to ~3.3V) for the specific channel
-  // esp_err_t result = adc2_config_channel_atten(ADC2_BATTERY_CHANNEL, ADC_ATTEN_DB_11);
-  
-  // if (result == ESP_OK)
-  //   {
-  //   Serial.println("ADC2 Channel configured successfully.");
-  //   }
-  // else
-  //   {
-  //   // If this fails, the force flag definitely isn't working.
-  //   Serial.printf("ADC2 Configuration Failed in setup() (Error: %s)\n", esp_err_to_name(result));
-  //   }
-
-
-
-
 
   initPorts();
   }
